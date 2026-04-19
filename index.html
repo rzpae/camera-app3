@@ -8,16 +8,12 @@
     body {
       margin: 0;
       font-family: sans-serif;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
     }
 
     #container {
       position: relative;
       width: 100%;
       max-width: 100%;
-      height: 70vh;
     }
 
     video, canvas {
@@ -50,7 +46,6 @@
 <body>
 
 <h3>カメラ + フレーム</h3>
-
 <div id="container">
   <video id="video" autoplay playsinline></video>
   <canvas id="overlay"></canvas>
@@ -100,38 +95,19 @@ async function startCamera(facing = "user") {
     video.srcObject = stream;
     currentStream = stream;
 
-    const container = document.getElementById('container');
-
     video.onloadedmetadata = () => {
       const vw = video.videoWidth;
       const vh = video.videoHeight;
 
-      // 内部解像度
-      canvas.setWidth(vw);
-      canvas.setHeight(vh);
-
-      // 表示比率をカメラに一致させる
-      container.style.aspectRatio = `${vw} / ${vh}`;
-
-      video.style.width = "100%";
-      video.style.height = "100%";
-    };
-
-    video.onloadedmetadata = () => {
       // 表示サイズを調整（高さ基準）
-      const vw = video.videoWidth;
-      const vh = video.videoHeight;
-
-      // 内部解像度そのまま使う
-      canvas.setWidth(vw);
-      canvas.setHeight(vh);
-
-      // 表示はCSSに任せる
-      video.style.width = "100%";
-      video.style.height = "auto";
+      const displayHeight = 240;
+      const displayWidth = vw * (displayHeight / vh);
 
       video.style.width = "100%";
       video.style.height = "auto";
+
+      canvas.setWidth(displayWidth);
+      canvas.setHeight(displayHeight);
     };
 
   } catch (err) {
@@ -202,7 +178,26 @@ function capture() {
   const ctx = tempCanvas.getContext('2d');
 
   // カメラ映像
-  ctx.drawImage(video, 0, 0, tempCanvas.width, tempCanvas.height);
+  const videoRatio = video.videoWidth / video.videoHeight;
+  const canvasRatio = tempCanvas.width / tempCanvas.height;
+
+  let drawWidth, drawHeight, offsetX, offsetY;
+
+  if (videoRatio > canvasRatio) {
+    // 横長 → 横を合わせる
+    drawWidth = tempCanvas.width;
+    drawHeight = tempCanvas.width / videoRatio;
+    offsetX = 0;
+    offsetY = (tempCanvas.height - drawHeight) / 2;
+  } else {
+    // 縦長 → 縦を合わせる
+    drawHeight = tempCanvas.height;
+    drawWidth = tempCanvas.height * videoRatio;
+    offsetX = (tempCanvas.width - drawWidth) / 2;
+    offsetY = 0;
+  }
+
+  ctx.drawImage(video, offsetX, offsetY, drawWidth, drawHeight);
 
   // オーバーレイ（Fabric）
   const dataUrl = canvas.toDataURL({
