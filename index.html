@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <title>Camera Frame App</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/fabric.js/5.3.0/fabric.min.js"></script>
+  <style>
+    body {
+      margin: 0;
+      font-family: sans-serif;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    #container {
+      position: relative;
+      width: 100%;
+      max-width: 100%;
+      height: 70vh;
+    }
+
+    video, canvas {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+    }
+
+    #video {
+      z-index: 0;
+      pointer-events: none;
+    }
+
+    #overlay {
+      z-index: 1;
+    }
+
+    #controls {
+      padding: 12px;
+    }
+
+    button {
+      font-size: 18px;
+      padding: 10px 16px;
+      margin: 4px;
+    }
+  </style>
+</head>
+<body>
+
+<h3>カメラ + フレーム</h3>
+
+<div id="container">
+  <video id="video" autoplay playsinline></video>
+  <canvas id="overlay"></canvas>
+</div>
+
+<div id="controls">
+  <input type="file" id="upload" accept="image/*"><br><br>
+
+  <button onclick="capture()">撮影</button>
+  <button onclick="toggleCamera()">カメラ切替</button>
+
+  <div>
+    <button onclick="moveImage(0, -10)">↑</button><br>
+    <button onclick="moveImage(-10, 0)">←</button>
+    <button onclick="moveImage(10, 0)">→</button><br>
+    <button onclick="moveImage(0, 10)">↓</button><br><br>
+
+    <button onclick="scaleImage(1.1)">拡大</button>
+    <button onclick="scaleImage(0.9)">縮小</button>
+  </div>
+</div>
+
+<script>
+let currentStream = null;
+const video = document.getElementById('video');
+const canvasEl = document.getElementById('overlay');
+let currentFacing = "environment";
+
+function toggleCamera() {
+  currentFacing = currentFacing === "user" ? "environment" : "user";
+  startCamera(currentFacing);
+}
+
+// Fabric.js 初期化
+const canvas = new fabric.Canvas('overlay');
+
+// カメラ起動
+async function startCamera(facing = "user") {
+  if (currentStream) {
+    currentStream.getTracks().forEach(track => track.stop());
+  }
+
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode: facing }
+    });
+    video.srcObject = stream;
+    currentStream = stream;
+
+    const container = document.getElementById('container');
+
+    video.onloadedmetadata = () => {
+      const vw = video.videoWidth;
+      const vh = video.videoHeight;
+
+      // 内部解像度
+      canvas.setWidth(vw);
+      canvas.setHeight(vh);
+
+      // 表示比率をカメラに一致させる
+      container.style.aspectRatio = `${vw} / ${vh}`;
+
+      video.style.width = "100%";
+      video.style.height = "100%";
+    };
+
+    video.onloadedmetadata = () => {
+      // 表示サイズを調整（高さ基準）
+      const vw = video.videoWidth;
+      const vh = video.videoHeight;
+
+      // 内部解像度そのまま使う
+      canvas.setWidth(vw);
+      canvas.setHeight(vh);
+
+      // 表示はCSSに任せる
+      video.style.width = "100%";
+      video.style.height = "auto";
+
+      video.style.width = "100%";
+      video.style.height = "auto";
+    };
+
+  } catch (err) {
+    alert('カメラが使えない');
+    console.error(err);
+  }
+}
+
+startCamera("environment");
+
+window.addEventListener('beforeunload', () => {
+  if (currentStream) {
+    currentStream.getTracks().forEach(track => track.stop());
+  }
+});
+
+// 画像アップロード → スタンプとして追加
+document.getElementById('upload').addEventListener('change', function(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+
+  // ① ファイル形式チェック
+  if (!file.type.startsWith('image/')) {
+    alert('画像ファイルだけにして');
+    return;
+  }
+
+  // ② サイズ制限
+  if (file.size > 5 * 1024 * 1024) {
+    alert('5MB以下にして');
+    return;
+  }
+
+  // ③ 既存画像クリア（1枚制限）
+  canvas.clear();
+
+  const reader = new FileReader();
+  reader.onload = function(f) {
+    fabric.Image.fromURL(f.target.result, function(img) {
+      img.set({
+        left: 100,
+        top: 100,
+        scaleX: 0.5,
+        scaleY: 0.5,
+        lockRotation: true,
+        lockScalingFlip: true,
+        lockUniScaling: true
+      });
+      img.setControlsVisibility({
+        mt: false, mb: false, ml: false, mr: false
+      });
+      img.hasRotatingPoint = false;
+      canvas.add(img);
+      canvas.setActiveObject(img);
+    });
+  };
+  reader.readAsDataURL(file);
+});
+
+// 撮影（video + overlay 合成）
+function capture() {
+  canvas.discardActiveObject();
+  canvas.renderAll();
+
+  const tempCanvas = document.createElement('canvas');
+  tempCanvas.width = canvas.width;
+  tempCanvas.height = canvas.height;
+  const ctx = tempCanvas.getContext('2d');
+
+  // カメラ映像
+  ctx.drawImage(video, 0, 0, tempCanvas.width, tempCanvas.height);
+
+  // オーバーレイ（Fabric）
+  const dataUrl = canvas.toDataURL({
+    format: 'png',
+  });
+
+  const overlayImg = new Image();
+  overlayImg.src = dataUrl;
+
+  // 画像保存
+  overlayImg.onload = function() {
+    ctx.drawImage(overlayImg, 0, 0);
+
+    const link = document.createElement('a');
+    link.download = 'photo.png';
+    link.href = tempCanvas.toDataURL('image/png');
+    link.click();
+  };
+}
+
+// 操作用関数
+function moveImage(dx, dy) {
+  const obj = canvas.getActiveObject();
+  if (!obj) return;
+
+  obj.left += dx;
+  obj.top += dy;
+  canvas.renderAll();
+}
+
+function scaleImage(factor) {
+  const obj = canvas.getActiveObject();
+  if (!obj) return;
+
+  obj.scaleX *= factor;
+  obj.scaleY *= factor;
+  canvas.renderAll();
+}
+</script>
+
+</body>
+</html>
