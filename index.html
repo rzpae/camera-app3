@@ -19,8 +19,8 @@
 <h3>カメラ + フレーム</h3>
 
 <div id="container">
-  <video id="video" autoplay playsinline width="1000" height="990"></video>
-  <canvas id="overlay" width="1000" height="990"></canvas>
+  <video id="video" autoplay playsinline width="1000" height="1500"></video>
+  <canvas id="overlay" width="1000" height="1500"></canvas>
 </div>
 
 <br><br>
@@ -70,7 +70,7 @@ async function startCamera(facing = "user") {
       const vh = video.videoHeight;
 
       // 表示サイズを調整（高さ基準）
-      const displayHeight = 990;
+      const displayHeight = 1500;
       const displayWidth = vw * (displayHeight / vh);
 
       video.width = displayWidth;
