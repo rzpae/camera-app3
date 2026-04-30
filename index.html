@@ -36,7 +36,12 @@
 
   <button onclick="scaleImage(1.1)">拡大</button>
   <button onclick="scaleImage(0.9)">縮小</button>
-  <button onclick="rotateImage()">回転</button>
+  <button onclick="rotateImage()">回転</button><br><br>
+
+  <button onclick="moveImage(0, -canvas.getHeight() / 3)">上</button>
+  <button onclick="moveImage(0, canvas.getHeight() / 3)">下</button>
+  <button onclick="moveImage(-canvas.getWidth() / 2, 0)">左</button>
+  <button onclick="moveImage(canvas.getWidth() / 2, 0)">右</button>
 </div>
 
 <script>
