@@ -19,8 +19,8 @@
 <h3>カメラ + フレーム</h3>
 
 <div id="container">
-  <video id="video" autoplay playsinline width="1000" height="1200"></video>
-  <canvas id="overlay" width="1000" height="1200"></canvas>
+  <video id="video" autoplay playsinline width="1000" height="990"></video>
+  <canvas id="overlay" width="1000" height="990"></canvas>
 </div>
 
 <br><br>
@@ -29,13 +29,14 @@
 <button onclick="capture()">撮影</button>
 <button onclick="toggleCamera()">カメラ切替</button>
 <div>
-  <button onclick="moveImage(0, -10)">↑</button><br>
-  <button onclick="moveImage(-10, 0)">←</button>
-  <button onclick="moveImage(10, 0)">→</button><br>
-  <button onclick="moveImage(0, 10)">↓</button><br><br>
+  <button onclick="moveImage(0, -30)">↑</button><br>
+  <button onclick="moveImage(-30, 0)">←</button>
+  <button onclick="moveImage(30, 0)">→</button><br>
+  <button onclick="moveImage(0, 30)">↓</button><br><br>
 
   <button onclick="scaleImage(1.1)">拡大</button>
   <button onclick="scaleImage(0.9)">縮小</button>
+  <button onclick="rotateImage()">回転</button>
 </div>
 
 <script>
@@ -70,7 +71,7 @@ async function startCamera(facing = "user") {
       const vh = video.videoHeight;
 
       // 表示サイズを調整（高さ基準）
-      const displayHeight = 1200;
+      const displayHeight = 990;
       const displayWidth = vw * (displayHeight / vh);
 
       video.width = displayWidth;
@@ -185,6 +186,11 @@ function capture() {
     link.download = 'photo.png';
     link.href = tempCanvas.toDataURL('image/png');
     link.click();
+    const obj = canvas.item(0);
+    if (obj) {
+      canvas.setActiveObject(obj);
+      canvas.renderAll();
+    }
   };
 }
 
@@ -204,6 +210,14 @@ function scaleImage(factor) {
 
   obj.scaleX *= factor;
   obj.scaleY *= factor;
+  canvas.renderAll();
+}
+
+function rotateImage() {
+  const obj = canvas.getActiveObject();
+  if (!obj) return;
+
+  obj.angle = (obj.angle + 90) % 360;
   canvas.renderAll();
 }
 </script>
